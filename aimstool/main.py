@@ -4,6 +4,7 @@ import argparse
 import requests
 from getpass import getpass
 from typing import List
+import os.path
 
 import aimslib.access.connect
 from  aimslib.access.cache import TripCache, CrewlistCache
@@ -16,7 +17,7 @@ from .roster import roster
 from .ical import ical
 from .build_csv import build_csv
 
-CACHE_DIR = "/home/jon/.cache/"
+CACHE_DIR = os.path.expanduser("~/.cache/")
 ECREW_LOGIN_PAGE = "https://ecrew.easyjet.com/wtouch/wtouch.exe/verify"
 
 
