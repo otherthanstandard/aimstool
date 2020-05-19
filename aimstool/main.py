@@ -9,7 +9,7 @@ import os.path
 import aimslib.access.connect
 from  aimslib.access.cache import TripCache, CrewlistCache
 import aimslib.access.brief_roster as Roster
-from aimslib.common.types import Duty, NoTripDetails
+from aimslib.common.types import Duty, NoTripDetails, AIMSException
 import aimslib.detailed_roster.process as dr
 
 from .freeform import build_freeform
@@ -108,6 +108,10 @@ def online(args) -> int:
         print("\n", e.__doc__, "\n", e.request.url, file=sys.stderr)
         if post_func: aimslib.access.connect.logout(post_func)
         return -1
+    except AIMSException as e:
+        print("\n", e.__doc__, file=sys.stderr)
+        if post_func: aimslib.access.connect.logout(post_func)
+        return -2
 
 
 def offline(args) -> int:
