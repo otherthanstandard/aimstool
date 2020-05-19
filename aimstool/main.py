@@ -101,7 +101,7 @@ def online(args) -> int:
         elif args.format == 'csv':
             dutylist = _build_expanded_dutylist(post_func, -args.months)
             crewlist_map = _crewlist_map(post_func, dutylist)
-            print(build_csv(dutylist, crewlist_map))
+            print(build_csv(dutylist, crewlist_map, args.fo))
         aimslib.access.connect.logout(post_func)
         return 0
     except requests.exceptions.RequestException as e:
@@ -123,7 +123,7 @@ def offline(args) -> int:
             print(build_freeform(dutylist, crew))
         elif args.format == "csv":
             crew = dr.crew(s, dutylist)
-            print(build_csv(dutylist, crew))
+            print(build_csv(dutylist, crew, args.fo))
     return 0
 
 
@@ -136,6 +136,7 @@ def _args():
     parser.add_argument('--user', '-u')
     parser.add_argument('--file', '-f')
     parser.add_argument('--months', '-m', type=int, default=1)
+    parser.add_argument('--fo', action='store_true')
     return parser.parse_args()
 
 
