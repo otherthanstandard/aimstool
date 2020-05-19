@@ -42,9 +42,8 @@ def _build_expanded_dutylist(post_func, months: int) -> List[Duty]:
             try:
                 expanded_dutylist.extend(trip_cache.trip(duty.trip_id))
             except NoTripDetails:
-                print(
-                    "Trip details not found for: ",
-                    duty.trip_id, file=sys.stderr)
+                print(f"Trip details not found for: {duty.trip_id}",
+                      file=sys.stderr)
         else:
             expanded_dutylist.append(duty)
     trip_cache.store()
