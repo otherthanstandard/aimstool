@@ -171,6 +171,7 @@ class Actions(tk.Frame):
 
 
     def ical(self):
+        dutylist = []
         if self.ms.mode == 'online':
             try:
                 months = int(self.ms.months.get())
