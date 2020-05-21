@@ -1,8 +1,21 @@
 import sys
+import requests
+from typing import List, Dict, Tuple
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 from tkinter import filedialog
+
+import aimslib.access.connect
+from aimslib.common.types import AIMSException, Duty, CrewMember
+import aimslib.detailed_roster.process as dr
+
+from . import access
+from .build_csv import build_csv
+from .ical import ical
+
+
+ECREW_LOGIN_PAGE = "https://ecrew.easyjet.com/wtouch/wtouch.exe/verify"
 
 class ModeSelector(tk.Frame):
 
@@ -27,14 +40,14 @@ class ModeSelector(tk.Frame):
 
         frm_rb = tk.Frame(self, relief=tk.SUNKEN, bd=2)
         frm_rb.pack(fill=tk.X, expand=True, ipadx=5, pady=5)
-        self.var = tk.StringVar()
+        self.rb_mode = tk.StringVar()
         online = ttk.Radiobutton(
             frm_rb, text="Online", command=self.__onPress,
-            variable=self.var, value='online', width=RBW)
+            variable=self.rb_mode, value='online', width=RBW)
         online.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         offline = ttk.Radiobutton(
             frm_rb, text="Offline", command=self.__onPress,
-            variable=self.var, value='offline', width=RBW)
+            variable=self.rb_mode, value='offline', width=RBW)
         offline.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
 
         self.frm_online = tk.Frame(self)
@@ -54,12 +67,16 @@ class ModeSelector(tk.Frame):
 
 
     def __onPress(self):
-        if self.var.get() == "offline":
+        if self.rb_mode.get() == "offline":
             self.frm_online.pack_forget()
             self.mode = 'offline'
         else:
             self.frm_online.pack(fill=tk.X, expand=True)
             self.mode = 'online'
+
+
+class ChangesException(AIMSException):
+    "You have changes"
 
 
 class Actions(tk.Frame):
@@ -100,16 +117,78 @@ class Actions(tk.Frame):
         btn_quit.pack(fill=tk.X)
 
 
+    def download(self, months: int, get_crew: bool=False
+    ) -> Tuple[List[Duty], Dict[str, List[CrewMember]]]:
+        dutylist = []
+        crewlist_map = {}
+        self.txt.delete('1.0', tk.END)
+        post_func = None
+        def heartbeat():
+            self.txt.insert(tk.END, '.')
+            self.txt.update()
+        try:
+            post_func = aimslib.access.connect.connect(
+                ECREW_LOGIN_PAGE, self.ms.username.get(),
+                self.ms.password.get(), heartbeat)
+            if aimslib.access.connect.changes(post_func):
+                raise ChangesException
+            dutylist = access.duties(post_func, months)
+            if get_crew:
+                crewlist_map = access.crew(post_func, dutylist)
+        except requests.exceptions.RequestException as e:
+            messagebox.showerror(
+                "Requests error", f"{e.__doc__}\n{e.request.url}")
+        except AIMSException as e:
+            messagebox.showerror("AIMS Error", e.__doc__)
+        finally:
+            if post_func: aimslib.access.connect.logout(post_func)
+        return (dutylist, crewlist_map)
+
+
     def csv(self):
-        with open("test.csv") as f:
-            self.txt.delete('0.1', tk.END)
-            self.txt.insert('0.1', f.read())
+        txt = ""
+        dutylist, crewlist_map = [], {}
+        if self.ms.mode == 'online':
+            try:
+                months = -int(self.ms.months.get())
+            except ValueError:
+                messagebox.showerror(
+                    "Value Error", "Months must be an integer.")
+                return
+            dutylist, crewlist_map = self.download(months, True)
+        else:
+            f = filedialog.askopenfile(filetypes=(
+                ("HTML", "*.htm"), ("HTML", "*.html"), ("All", "*.*")))
+            if f:
+                s = f.read()
+                dutylist = dr.duties(s)
+                crewlist_map = dr.crew(s, dutylist)
+        if not dutylist: return
+        fo = True if self.ms.role.get() == 'fo' else False
+        txt = build_csv(dutylist, crewlist_map, fo)
+        self.txt.delete('1.0', tk.END)
+        self.txt.insert(tk.END, txt)
 
 
     def ical(self):
-        with open("test.ical") as f:
-            self.txt.delete('0.1', tk.END)
-            self.txt.insert('0.1', f.read())
+        if self.ms.mode == 'online':
+            try:
+                months = int(self.ms.months.get())
+            except ValueError:
+                messagebox.showerror(
+                    "Value Error", "Months must be an integer.")
+                return
+            dutylist, _ = self.download(months, False)
+        else:
+            f = filedialog.askopenfile(filetypes=(
+                ("HTML", "*.htm"), ("HTML", "*.html"), ("All", "*.*")))
+            if f:
+                s = f.read()
+                dutylist = dr.duties(s)
+        if not dutylist: return
+        txt = ical(dutylist)
+        self.txt.delete('1.0', tk.END)
+        self.txt.insert(tk.END, txt)
 
 
     def copy(self):
@@ -140,9 +219,11 @@ class MainWindow(tk.Frame):
         sb.pack(side=tk.RIGHT, fill=tk.Y)
         sb.config(command=txt.yview)
         txt.config(yscrollcommand=sb.set)
-        ms = ModeSelector(sidebar).pack()
+        ms = ModeSelector(sidebar)
+        ms.pack()
         ttk.Separator(sidebar, orient="horizontal").pack(fill=tk.X, pady=20)
-        Actions(sidebar, ms, txt).pack(fill=tk.BOTH, expand=True, side=tk.BOTTOM)
+        act = Actions(sidebar, ms, txt)
+        act.pack(fill=tk.BOTH, expand=True, side=tk.BOTTOM)
 
 
 def main() -> int:
