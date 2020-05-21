@@ -13,9 +13,8 @@ import aimslib.detailed_roster.process as dr
 from . import access
 from .build_csv import build_csv
 from .ical import ical
+from .main import ECREW_LOGIN_PAGE
 
-
-ECREW_LOGIN_PAGE = "https://ecrew.easyjet.com/wtouch/wtouch.exe/verify"
 
 class ModeSelector(tk.Frame):
 
