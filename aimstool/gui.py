@@ -86,6 +86,7 @@ class Actions(tk.Frame):
         self.make_widgets()
         self.ms = ms
         self.txt = txt
+        self.last = None
 
 
     def make_widgets(self):
@@ -168,6 +169,7 @@ class Actions(tk.Frame):
         txt = build_csv(dutylist, crewlist_map, fo)
         self.txt.delete('1.0', tk.END)
         self.txt.insert(tk.END, txt)
+        self.last = '.csv'
 
 
     def ical(self):
@@ -190,18 +192,22 @@ class Actions(tk.Frame):
         txt = ical(dutylist)
         self.txt.delete('1.0', tk.END)
         self.txt.insert(tk.END, txt)
+        self.last = '.ical'
 
 
     def copy(self):
         tl = self.winfo_toplevel()
         tl.clipboard_clear()
-        tl.clipboard_append(self.txt.get('0.1', tk.END))
+        tl.clipboard_append(self.txt.get('1.0', tk.END))
         messagebox.showinfo('Copy', 'Text copied to clipboard.')
 
 
     def save(self):
-        fn = filedialog.asksaveasfilename()
-        print(fn)
+        fn = filedialog.asksaveasfilename(
+            defaultextension = self.last)
+        if fn:
+            with open(fn, "w", encoding="utf-8") as f:
+                f.write(self.txt.get('1.0', tk.END))
 
 
 class MainWindow(tk.Frame):
