@@ -232,7 +232,7 @@ class MainWindow(tk.Frame):
         act.pack(fill=tk.BOTH, expand=True, side=tk.BOTTOM)
 
 
-def main() -> int:
+def main():
     root = tk.Tk()
     root.title("aimstool")
     MainWindow(root).pack(fill=tk.BOTH, expand=True)
