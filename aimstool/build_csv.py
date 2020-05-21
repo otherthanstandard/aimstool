@@ -13,7 +13,11 @@ def build_csv(duties: List[Duty], crews: Dict[str, List[CrewMember]], fo:bool
     fieldname_map = (('Off Blocks', 'act_start'), ('On Blocks', 'act_finish'),
                      ('Origin', 'from_'), ('Destination', 'to'),
                      ('Registration', 'reg'))
-    writer = csv.DictWriter(output, fieldnames=fieldnames,extrasaction='ignore')
+    writer = csv.DictWriter(
+        output,
+        fieldnames=fieldnames,
+        extrasaction='ignore',
+        dialect='unix')
     writer.writeheader()
     for duty in duties:
         if not duty.sectors: continue
