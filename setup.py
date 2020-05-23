@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="aimstool",
-    version="0.0.5",
+    version="0.0.6",
     author="Jon Hurst",
     author_email="jon.a@hursts.org.uk",
     description="A tool leveraging aimslib",
