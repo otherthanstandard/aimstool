@@ -2,7 +2,10 @@
 import sys
 import argparse
 import requests
-import boto3
+import urllib.request as request
+import urllib.parse as parse
+import urllib.error
+import json
 from getpass import getpass
 from typing import List
 
@@ -77,16 +80,9 @@ def online(args) -> int:
 
 def offline(args) -> int:
     with open(args.file, encoding="utf-8") as f:
-        dynamodb = boto3.resource(
-            'dynamodb',
-            region_name='eu-west-1',
-            aws_access_key_id='AKIA5MVEHGMFNPWM5B6I',
-            aws_secret_access_key='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'
-        )
-        table = dynamodb.Table('flights')
         s = f.read()
         dutylist = dr.duties(s)
-        dutylist = update_from_flightinfo(table, dutylist)
+        dutylist = update_from_flightinfo(dutylist)
         if args.format == "roster":
             print(roster(dutylist))
         elif args.format == "ical":
@@ -100,20 +96,25 @@ def offline(args) -> int:
     return 0
 
 
-def update_from_flightinfo(table, dutylist: List[Duty]) -> List[Duty]:
+def update_from_flightinfo(dutylist: List[Duty]) -> List[Duty]:
     retval: List[Duty] = []
     for duty in dutylist:
         updated_sectors: List[Sector] = []
         for sec in duty.sectors:
-            response = table.get_item(Key={
-                'flightid': f'{sec.sched_start:%Y-%m-%d:%H%M}{sec.name}'})
-            if 'Item' in response:
-                i = response['Item']
+            flightid = f'{sec.sched_start:%Y-%m-%d:%H%M}{sec.name}'
+            data = parse.urlencode({"id": flightid})
+            try:
+                r = request.urlopen(
+                    f"https://efwj6ola8d.execute-api.eu-west-1.amazonaws.com/"
+                    f"default/reg?{data}")
+                if r.status != 200: raise urllib.error.URLError("Not 200")
+                j = json.loads(r.read().decode())
+                if 'Item' not in j: raise urllib.error.URLError("No Item")
+                reg = j['Item']['reg']['S']
+                type_ = f"A{j['Item']['type_']['S']}"
                 updated_sectors.append(
-                    sec._replace(
-                        reg = i['reg'],
-                        type_ = f"A{i['type_']}"))
-            else:
+                    sec._replace(reg=reg, type_=type_))
+            except urllib.error.URLError:
                 updated_sectors.append(sec)
         retval.append(duty._replace(sectors=updated_sectors))
     return retval
