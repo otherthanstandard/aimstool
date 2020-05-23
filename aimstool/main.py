@@ -109,7 +109,6 @@ def update_from_flightinfo(table, dutylist: List[Duty]) -> List[Duty]:
                 'flightid': f'{sec.sched_start:%Y-%m-%d:%H%M}{sec.name}'})
             if 'Item' in response:
                 i = response['Item']
-                print(i)
                 updated_sectors.append(
                     sec._replace(
                         reg = i['reg'],
