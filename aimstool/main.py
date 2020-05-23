@@ -2,10 +2,12 @@
 import sys
 import argparse
 import requests
+import boto3
 from getpass import getpass
+from typing import List
 
 import aimslib.access.connect
-from aimslib.common.types import AIMSException
+from aimslib.common.types import AIMSException, Duty, Sector
 import aimslib.detailed_roster.process as dr
 
 from .freeform import build_freeform
@@ -75,8 +77,16 @@ def online(args) -> int:
 
 def offline(args) -> int:
     with open(args.file, encoding="utf-8") as f:
+        dynamodb = boto3.resource(
+            'dynamodb',
+            region_name='eu-west-1',
+            aws_access_key_id='AKIA5MVEHGMFNPWM5B6I',
+            aws_secret_access_key='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'
+        )
+        table = dynamodb.Table('flights')
         s = f.read()
         dutylist = dr.duties(s)
+        dutylist = update_from_flightinfo(table, dutylist)
         if args.format == "roster":
             print(roster(dutylist))
         elif args.format == "ical":
@@ -88,6 +98,26 @@ def offline(args) -> int:
             crew = dr.crew(s, dutylist)
             print(build_csv(dutylist, crew, args.fo))
     return 0
+
+
+def update_from_flightinfo(table, dutylist: List[Duty]) -> List[Duty]:
+    retval: List[Duty] = []
+    for duty in dutylist:
+        updated_sectors: List[Sector] = []
+        for sec in duty.sectors:
+            response = table.get_item(Key={
+                'flightid': f'{sec.sched_start:%Y-%m-%d:%H%M}{sec.name}'})
+            if 'Item' in response:
+                i = response['Item']
+                print(i)
+                updated_sectors.append(
+                    sec._replace(
+                        reg = i['reg'],
+                        type_ = f"A{i['type_']}"))
+            else:
+                updated_sectors.append(sec)
+        retval.append(duty._replace(sectors=updated_sectors))
+    return retval
 
 
 def _args():

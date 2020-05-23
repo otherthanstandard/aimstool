@@ -12,7 +12,7 @@ def build_csv(duties: List[Duty], crews: Dict[str, List[CrewMember]], fo:bool
                   'Registration', 'Type', 'Captain', 'Role', 'Crew']
     fieldname_map = (('Off Blocks', 'act_start'), ('On Blocks', 'act_finish'),
                      ('Origin', 'from_'), ('Destination', 'to'),
-                     ('Registration', 'reg'))
+                     ('Registration', 'reg'), ('Type', 'type_'))
     writer = csv.DictWriter(
         output,
         fieldnames=fieldnames,
@@ -33,8 +33,7 @@ def build_csv(duties: List[Duty], crews: Dict[str, List[CrewMember]], fo:bool
             if fo and crewlist[0].role == 'CP':
                 sec_dict['Captain'] = crewlist[0].name
             crewstr = "; ".join([f"{X[1]}:{X[0]}" for X in crewlist])
-            sec_dict['Type'] = ''
-            if (len(sector.crewlist_id) > 3
+            if (not sector.type_ and len(sector.crewlist_id) > 3
                 and sector.crewlist_id[-3:] in ("319", "320", "321")):
                 sec_dict['Type'] = f"A{sector.crewlist_id[-3:]}"
             sec_dict['Crew'] = crewstr
