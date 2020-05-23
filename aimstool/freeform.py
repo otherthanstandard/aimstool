@@ -66,7 +66,9 @@ def build_freeform(duties: List[Duty], crews: Dict[str, List[CrewMember]]
                 #characters -- this might turn out to be a wild assumption
                 #but we'll use it until proven to be a bad idea.
                 type_ = "???"
-                if (len(sector.crewlist_id) > 3 and
+                if sector.type_:
+                    type_ = sector.type_
+                elif (len(sector.crewlist_id) > 3 and
                     sector.crewlist_id[-3:] in ("319", "320", "321")):
                     type_ = f"A{sector.crewlist_id[-3:]}"
                 output.append(f"{sector.reg}:{type_}")
