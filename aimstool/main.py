@@ -2,19 +2,18 @@
 import sys
 import argparse
 import requests
-import json
 from getpass import getpass
 from typing import List
 
 import aimslib.access.connect
 from aimslib.common.types import AIMSException, Duty, Sector, SectorFlags
 import aimslib.detailed_roster.process as dr
+import aimslib.access.expanded_roster as er
 
-from .freeform import build_freeform
-from .roster import roster
-from .ical import ical
-from .build_csv import build_csv
-from . import access
+from aimslib.output.freeform import freeform
+from aimslib.output.roster import roster
+from aimslib.output.ical import ical
+from aimslib.output.csv import csv
 
 ECREW_LOGIN_PAGE = "https://ecrew.easyjet.com/wtouch/wtouch.exe/verify"
 
@@ -50,19 +49,19 @@ def online(args) -> int:
             aimslib.access.connect.logout(post_func)
             return -1
         if args.format == "freeform":
-            dutylist = access.duties(post_func, -args.months)
-            crewlist_map = access.crew(post_func, dutylist)
-            print(build_freeform(dutylist, crewlist_map))
+            dutylist = er.duties(post_func, -args.months)
+            crewlist_map = er.crew(post_func, dutylist)
+            print(freeform(dutylist, crewlist_map))
         elif args.format == "roster":
-            dutylist = access.duties(post_func, args.months)
+            dutylist = er.duties(post_func, args.months)
             print(roster(dutylist))
         elif args.format == "ical":
-            dutylist = access.duties(post_func, args.months)
+            dutylist = er.duties(post_func, args.months)
             print(ical(dutylist))
         elif args.format == 'csv':
-            dutylist = access.duties(post_func, -args.months)
-            crewlist_map = access.crew(post_func, dutylist)
-            print(build_csv(dutylist, crewlist_map, args.fo))
+            dutylist = er.duties(post_func, -args.months)
+            crewlist_map = er.crew(post_func, dutylist)
+            print(csv(dutylist, crewlist_map, args.fo))
         aimslib.access.connect.logout(post_func)
         return 0
     except requests.exceptions.RequestException as e:
@@ -86,11 +85,11 @@ def offline(args) -> int:
         elif args.format == "freeform":
             dutylist = update_from_flightinfo(dutylist)
             crew = dr.crew(s, dutylist)
-            print(build_freeform(dutylist, crew))
+            print(freeform(dutylist, crew))
         elif args.format == "csv":
             dutylist = update_from_flightinfo(dutylist)
             crew = dr.crew(s, dutylist)
-            print(build_csv(dutylist, crew, args.fo))
+            print(csv(dutylist, crew, args.fo))
     return 0
 
 

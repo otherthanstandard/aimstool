@@ -9,10 +9,10 @@ from tkinter import filedialog
 import aimslib.access.connect
 from aimslib.common.types import AIMSException, Duty, CrewMember
 import aimslib.detailed_roster.process as dr
+import aimslib.access.expanded_roster as er
 
-from . import access
-from .build_csv import build_csv
-from .ical import ical
+from aimslib.output.csv import csv
+from aimslib.ouput.ical import ical
 from .main import ECREW_LOGIN_PAGE
 
 
@@ -132,9 +132,9 @@ class Actions(tk.Frame):
                 self.ms.password.get(), heartbeat)
             if aimslib.access.connect.changes(post_func):
                 raise ChangesException
-            dutylist = access.duties(post_func, months)
+            dutylist = er.duties(post_func, months)
             if get_crew:
-                crewlist_map = access.crew(post_func, dutylist)
+                crewlist_map = er.crew(post_func, dutylist)
         except requests.exceptions.RequestException as e:
             messagebox.showerror(
                 "Requests error", f"{e.__doc__}\n{e.request.url}")
@@ -165,7 +165,7 @@ class Actions(tk.Frame):
                 crewlist_map = dr.crew(s, dutylist)
         if not dutylist: return
         fo = True if self.ms.role.get() == 'fo' else False
-        txt = build_csv(dutylist, crewlist_map, fo)
+        txt = csv(dutylist, crewlist_map, fo)
         self.txt.delete('1.0', tk.END)
         self.txt.insert(tk.END, txt)
         self.last = '.csv'
