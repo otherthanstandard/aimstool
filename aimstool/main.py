@@ -100,12 +100,14 @@ def update_from_flightinfo(dutylist: List[Duty]) -> List[Duty]:
         ids.extend([f'{X.sched_start:%Y%m%dT%H%M}F{X.name}'
                     for X in duty.sectors
                     if X.flags == SectorFlags.NONE])
-    r = requests.post(
-        f"https://efwj6ola8d.execute-api.eu-west-1.amazonaws.com/default/reg",
-        json={'flights': ids})
-    if r.status_code != requests.codes.ok:
-        return dutylist
-    regntype_map = r.json()
+    try:
+        r = requests.post(
+            f"https://efwj6ola8d.execute-api.eu-west-1.amazonaws.com/default/reg",
+            json={'flights': ids})
+        r.raise_for_status()
+        regntype_map = r.json()
+    except requests.exceptions.RequestException:
+        return dutylist #if anything goes wrong, just return input
     for duty in dutylist:
         updated_sectors: List[Sector] = []
         for sec in duty.sectors:
