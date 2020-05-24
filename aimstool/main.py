@@ -23,55 +23,55 @@ def _heartbeat():
     sys.stderr.flush()
 
 
+class Changes(Exception):
+    "You have changes."
+
+
 def online(args) -> int:
     post_func = None
     if not args.user:
         print("Username required.")
         return -1
+    retval = 0
+    outstr = ""
     try:
         post_func = aimslib.access.connect.connect(
             ECREW_LOGIN_PAGE,
             args.user,
             getpass(),
             _heartbeat)
-        changes = aimslib.access.connect.changes(post_func)
+        if aimslib.access.connect.changes(post_func):
+            raise Changes
         if args.format == "changes":
-            if changes:
-                print("\nYou have changes.")
-            else:
-                print("\nNo changes.")
-            aimslib.access.connect.logout(post_func)
-            return 0
-        if changes:
-            print(
-                "\nCannot continue because you have changes.",
-                file=sys.stderr)
-            aimslib.access.connect.logout(post_func)
-            return -1
-        if args.format == "freeform":
+            outstr = "No changes."
+        elif args.format == "freeform":
             dutylist = er.duties(post_func, -args.months)
             crewlist_map = er.crew(post_func, dutylist)
-            print(freeform(dutylist, crewlist_map))
+            outstr = freeform(dutylist, crewlist_map)
         elif args.format == "roster":
             dutylist = er.duties(post_func, args.months)
-            print(roster(dutylist))
+            outstr = roster(dutylist)
         elif args.format == "ical":
             dutylist = er.duties(post_func, args.months)
-            print(ical(dutylist))
+            outstr = ical(dutylist)
         elif args.format == 'csv':
             dutylist = er.duties(post_func, -args.months)
             crewlist_map = er.crew(post_func, dutylist)
-            print(csv(dutylist, crewlist_map, args.fo))
-        aimslib.access.connect.logout(post_func)
-        return 0
+            outstr = csv(dutylist, crewlist_map, args.fo)
+    except Changes:
+        output = sys.stdout if args.format == 'changes' else sys.stderr
+        print("You have changes.", file=output)
     except requests.exceptions.RequestException as e:
-        print("\n", e.__doc__, "\n", e.request.url, file=sys.stderr)
-        if post_func: aimslib.access.connect.logout(post_func)
-        return -1
+        print(f"\n{e.__doc__}\n  e.request.url", file=sys.stderr)
+        retval = -2
     except AIMSException as e:
-        print("\n", e.__doc__, file=sys.stderr)
+        print(f"\n{e.__doc__}", file=sys.stderr)
+        retval = -3
+    finally:
         if post_func: aimslib.access.connect.logout(post_func)
-        return -2
+        print(f"\n{outstr}")
+        return retval
+
 
 
 def offline(args) -> int:
