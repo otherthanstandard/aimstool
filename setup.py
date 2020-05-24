@@ -25,7 +25,6 @@ setuptools.setup(
     entry_points={
         "console_scripts": [
             "aims = aimstool.main:main",
-            "aimsgui = aimstool.gui:main",
             ]
     },
     python_requires='>=3.6',
