@@ -2,15 +2,12 @@
 import sys
 import argparse
 import requests
-import urllib.request as request
-import urllib.parse as parse
-import urllib.error
 import json
 from getpass import getpass
 from typing import List
 
 import aimslib.access.connect
-from aimslib.common.types import AIMSException, Duty, Sector
+from aimslib.common.types import AIMSException, Duty, Sector, SectorFlags
 import aimslib.detailed_roster.process as dr
 
 from .freeform import build_freeform
@@ -82,15 +79,16 @@ def offline(args) -> int:
     with open(args.file, encoding="utf-8") as f:
         s = f.read()
         dutylist = dr.duties(s)
-        dutylist = update_from_flightinfo(dutylist)
         if args.format == "roster":
             print(roster(dutylist))
         elif args.format == "ical":
             print(ical(dutylist))
         elif args.format == "freeform":
+            dutylist = update_from_flightinfo(dutylist)
             crew = dr.crew(s, dutylist)
             print(build_freeform(dutylist, crew))
         elif args.format == "csv":
+            dutylist = update_from_flightinfo(dutylist)
             crew = dr.crew(s, dutylist)
             print(build_csv(dutylist, crew, args.fo))
     return 0
@@ -98,23 +96,25 @@ def offline(args) -> int:
 
 def update_from_flightinfo(dutylist: List[Duty]) -> List[Duty]:
     retval: List[Duty] = []
+    ids = []
+    for duty in dutylist:
+        ids.extend([f'{X.sched_start:%Y%m%dT%H%M}F{X.name}'
+                    for X in duty.sectors
+                    if X.flags == SectorFlags.NONE])
+    r = requests.post(
+        f"https://efwj6ola8d.execute-api.eu-west-1.amazonaws.com/default/reg",
+        json={'flights': ids})
+    if r.status_code != requests.codes.ok:
+        return dutylist
+    regntype_map = r.json()
     for duty in dutylist:
         updated_sectors: List[Sector] = []
         for sec in duty.sectors:
-            flightid = f'{sec.sched_start:%Y-%m-%d:%H%M}{sec.name}'
-            data = parse.urlencode({"id": flightid})
-            try:
-                r = request.urlopen(
-                    f"https://efwj6ola8d.execute-api.eu-west-1.amazonaws.com/"
-                    f"default/reg?{data}")
-                if r.status != 200: raise urllib.error.URLError("Not 200")
-                j = json.loads(r.read().decode())
-                if 'Item' not in j: raise urllib.error.URLError("No Item")
-                reg = j['Item']['reg']['S']
-                type_ = f"A{j['Item']['type_']['S']}"
-                updated_sectors.append(
-                    sec._replace(reg=reg, type_=type_))
-            except urllib.error.URLError:
+            flightid = f'{sec.sched_start:%Y%m%dT%H%M}F{sec.name}'
+            if flightid in regntype_map:
+                reg, type_ = regntype_map[flightid]
+                updated_sectors.append(sec._replace(reg=reg, type_=type_))
+            else:
                 updated_sectors.append(sec)
         retval.append(duty._replace(sectors=updated_sectors))
     return retval
