@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import sys
+import os
 import argparse
 import requests
 from getpass import getpass
@@ -15,8 +16,6 @@ from aimslib.output.roster import roster
 from aimslib.output.ical import ical
 from aimslib.output.csv import csv
 
-ECREW_LOGIN_PAGE = "https://ecrew.easyjet.com/wtouch/wtouch.exe/verify"
-
 
 def _heartbeat():
     sys.stderr.write('.')
@@ -29,17 +28,21 @@ class Changes(Exception):
 
 def online(args) -> int:
     post_func = None
-    if not args.user:
-        print("Username required.")
+    username = args.user or os.environ.get('AIMS_USERNAME')
+    if not username:
+        print("Username required.", file=sys.stderr)
         return -1
+    server = args.server or os.environ.get('AIMS_SERVER')
+    if not server:
+        print("Please specify server.", file=sys.stderr)
+        return -1
+    password = args.password or os.environ.get('AIMS_PASSWORD') or getpass()
     retval = 0
     outstr = ""
     try:
         post_func = aimslib.access.connect.connect(
-            ECREW_LOGIN_PAGE,
-            args.user,
-            getpass(),
-            _heartbeat)
+            f"https://{server}/wtouch/wtouch.exe/verify",
+            username, password, _heartbeat)
         if aimslib.access.connect.changes(post_func):
             raise Changes
         if args.format == "changes":
@@ -128,6 +131,8 @@ def _args():
                         choices=['roster', 'freeform', 'changes', 'ical',
                                  'csv'])
     parser.add_argument('--user', '-u')
+    parser.add_argument('--password', '-p')
+    parser.add_argument('--server', '-s')
     parser.add_argument('--file', '-f')
     parser.add_argument('--months', '-m', type=int, default=1)
     parser.add_argument('--fo', action='store_true')
