@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="aimstool",
-    version="0.1.0",
+    version="0.1.1",
     author="Jon Hurst",
     author_email="jon.a@hursts.org.uk",
     description="A tool leveraging aimslib",
@@ -14,7 +14,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/JonHurst/aimstool",
     packages=setuptools.find_packages(),
-    install_requires=['aimslib>=0.0.6', 'python-dateutil', 'requests'],
+    install_requires=['aimslib>=0.1.1', 'python-dateutil', 'requests'],
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Environment :: Console",
