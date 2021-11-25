@@ -76,23 +76,30 @@ def online(args) -> int:
         return retval
 
 
-
 def offline(args) -> int:
-    with open(args.file, encoding="utf-8") as f:
-        s = f.read()
-        dutylist = dr.duties(s)
-        if args.format == "roster":
-            print(roster(dutylist))
-        elif args.format == "ical":
-            print(ical(dutylist))
-        elif args.format == "freeform":
-            dutylist = update_from_flightinfo(dutylist)
-            crew = dr.crew(s, dutylist)
-            print(freeform(dutylist, crew))
-        elif args.format == "csv":
-            dutylist = update_from_flightinfo(dutylist)
-            crew = dr.crew(s, dutylist)
-            print(csv(dutylist, crew, args.fo))
+    assert(args.aws or args.file)
+    s = ""
+    if args.file:
+        with open(args.file, encoding="utf-8") as f:
+            s = f.read()
+    else:
+        aws_roster_path = os.environ.get("AWS_ROSTER_PATH")
+        r = requests.get(aws_roster_path + f"roster-{args.aws}.htm")
+        r.raise_for_status()
+        s = r.text
+    dutylist = dr.duties(s)
+    if args.format == "roster":
+        print(roster(dutylist))
+    elif args.format == "ical":
+        print(ical(dutylist))
+    elif args.format == "freeform":
+        dutylist = update_from_flightinfo(dutylist)
+        crew = dr.crew(s, dutylist)
+        print(freeform(dutylist, crew))
+    elif args.format == "csv":
+        dutylist = update_from_flightinfo(dutylist)
+        crew = dr.crew(s, dutylist)
+        print(csv(dutylist, crew, args.fo))
     return 0
 
 
@@ -136,13 +143,14 @@ def _args():
     parser.add_argument('--file', '-f')
     parser.add_argument('--months', '-m', type=int, default=1)
     parser.add_argument('--fo', action='store_true')
+    parser.add_argument('--aws', '-a')
     return parser.parse_args()
 
 
 def main() -> int:
     args = _args()
     retval = 0;
-    if args.file:
+    if args.file or args.aws:
         retval = offline(args)
     else:
         retval = online(args)
