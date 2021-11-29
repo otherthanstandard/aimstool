@@ -84,7 +84,10 @@ def offline(args) -> int:
             s = f.read()
     else:
         aws_roster_path = os.environ.get("AWS_ROSTER_PATH")
-        r = requests.get(aws_roster_path + f"roster-{args.aws}.htm")
+        aws_authstr = os.environ.get("AWS_AUTHSTR");
+        r = requests.get(
+            aws_roster_path + f"roster-{args.aws}.htm",
+            headers={"Authorization": f"Basic {aws_authstr}"})
         r.raise_for_status()
         s = r.text
     dutylist = dr.duties(s)
